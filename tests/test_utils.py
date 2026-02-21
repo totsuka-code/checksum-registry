@@ -1,5 +1,7 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
+import os
+import sys
 from pathlib import Path
 
 from cryptography.hazmat.primitives import serialization
@@ -23,5 +25,9 @@ def write_test_keys(base_dir: Path) -> None:
         format=serialization.PublicFormat.SubjectPublicKeyInfo,
     )
 
-    (keys_dir / "private_key.pem").write_bytes(private_pem)
+    private_path = keys_dir / "private_key.pem"
+    private_path.write_bytes(private_pem)
+    if not sys.platform.startswith("win"):
+        os.chmod(private_path, 0o600)
+
     (keys_dir / "public_key.pem").write_bytes(public_pem)

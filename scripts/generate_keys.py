@@ -1,5 +1,7 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
+import os
+import sys
 from pathlib import Path
 
 from cryptography.hazmat.primitives import serialization
@@ -28,6 +30,8 @@ def main() -> None:
 
     private_path.write_bytes(private_pem)
     public_path.write_bytes(public_pem)
+    if not sys.platform.startswith("win"):
+        os.chmod(private_path, 0o600)
 
     print(f"generated: {private_path}")
     print(f"generated: {public_path}")
