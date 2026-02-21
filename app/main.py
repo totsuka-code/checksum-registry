@@ -2,7 +2,7 @@ import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
@@ -34,9 +34,7 @@ PRIVATE_KEY_PATH = Path("keys/private_key.pem")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    # v0.2: 公開鍵は起動必須
     load_public_key(str(PUBLIC_KEY_PATH))
-    # 開発用秘密鍵が存在する場合は権限制約を確認する
     if PRIVATE_KEY_PATH.exists():
         validate_private_key_permissions(str(PRIVATE_KEY_PATH))
     ensure_ledger_exists()
@@ -118,9 +116,9 @@ def _verify_breakdown(valid: bool, reason: str | None) -> dict[str, Any]:
 
 @app.post("/api/v1/records/register", response_model=RegisterResponse, status_code=201)
 async def register_record(
-    name: str | None = Form(None),
-    version: str | None = Form(None),
-    file: UploadFile | None = File(None),
+    name: Annotated[str | None, Form()] = None,
+    version: Annotated[str | None, Form()] = None,
+    file: Annotated[UploadFile | None, File()] = None,
 ) -> JSONResponse | dict[str, Any]:
     if name is None or version is None or file is None:
         log_event("records_register", "invalid_request", {})
@@ -183,9 +181,9 @@ async def register_record(
 
 @app.post("/api/v1/records/verify", response_model=VerifyResponse)
 async def verify_record(
-    name: str = Form(""),
-    version: str = Form(""),
-    file: UploadFile | None = File(None),
+    name: Annotated[str, Form()] = "",
+    version: Annotated[str, Form()] = "",
+    file: Annotated[UploadFile | None, File()] = None,
 ) -> JSONResponse | dict[str, Any]:
     if file is None or not file.filename:
         log_event("records_verify", "invalid_request", {})

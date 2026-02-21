@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +9,7 @@ AUDIT_LOG_PATH = Path("logs/audit.log.jsonl")
 
 
 def _utc_now_iso8601_seconds() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def log_event(action: str, status: str, details: dict[str, Any] | None = None) -> None:

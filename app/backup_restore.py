@@ -4,7 +4,7 @@ import hashlib
 import json
 import os
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +17,7 @@ AUDIT_LOG_PATH = Path("logs/audit.log.jsonl")
 
 
 def _utc_stamp() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(UTC).replace(microsecond=0).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _sha256_file(path: Path) -> str:
@@ -67,7 +67,7 @@ def perform_backup(backup_root: Path = Path("backups")) -> Path:
 
     manifest = {
         "created_at_utc": (
-            datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+            datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
         ),
         "files": files,
     }

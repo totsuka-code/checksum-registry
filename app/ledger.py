@@ -4,7 +4,7 @@ import hashlib
 import json
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -29,7 +29,7 @@ LOCK_RETRY_SECONDS = 0.05
 
 
 def _utc_now_iso8601_seconds() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def _canonical_json_bytes(obj: Any) -> bytes:
@@ -116,9 +116,9 @@ def _acquire_lock() -> int:
     while True:
         try:
             return os.open(str(LOCK_PATH), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError:
+        except FileExistsError as err:
             if time.monotonic() >= deadline:
-                raise TimeoutError("ledger lock timeout")
+                raise TimeoutError("ledger lock timeout") from err
             time.sleep(LOCK_RETRY_SECONDS)
 
 
