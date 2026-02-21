@@ -1,4 +1,4 @@
-# Byte-compiled / optimized / DLL files
+﻿# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
@@ -208,3 +208,5 @@ __marimo__/
 
 # Runtime data
 data/ledger.json
+keys/private_key.pem
+
