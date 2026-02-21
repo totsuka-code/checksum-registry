@@ -54,6 +54,12 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 pytest
 ```
 
+## 静的解析
+```bash
+ruff check .
+mypy app scripts
+```
+
 ## 永続ファイル
 - 台帳: `data/ledger.json`
 - 最新アンカー: `anchors/latest.json`

@@ -19,7 +19,13 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Compile check
         run: |
-          python -m py_compile app/main.py app/ledger.py app/crypto_keys.py app/hashing.py scripts/generate_keys.py
+          python -m py_compile app/main.py app/ledger.py app/crypto_keys.py app/hashing.py app/schemas.py scripts/generate_keys.py scripts/perf_hash_benchmark.py
+      - name: Ruff
+        run: |
+          ruff check .
+      - name: Mypy
+        run: |
+          mypy app scripts
       - name: Run tests
         run: |
           pytest
