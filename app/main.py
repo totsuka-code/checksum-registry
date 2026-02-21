@@ -19,6 +19,8 @@ PUBLIC_KEY_PATH = Path("keys/public_key.pem")
 
 @app.on_event("startup")
 def on_startup() -> None:
+    # v0.2: 公開鍵は起動必須
+    load_public_key(str(PUBLIC_KEY_PATH))
     ensure_ledger_exists()
 
 
@@ -67,9 +69,15 @@ def _verify_breakdown(valid: bool, reason: str | None) -> dict[str, Any]:
             "signature_valid": True,
         }
 
-    if reason in {"signature_missing", "signature_invalid", "unknown_key"}:
+    if reason in {"signature_missing", "signature_invalid"}:
         return {
             "chain_integrity_valid": True,
+            "signature_valid": False,
+        }
+
+    if reason == "unknown_key":
+        return {
+            "chain_integrity_valid": None,
             "signature_valid": False,
         }
 
