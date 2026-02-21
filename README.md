@@ -81,3 +81,8 @@ python scripts/restore_registry.py backups/<timestamp> --restore-public-key
 ```bash
 python scripts/migrate_v01_to_v02.py --src data/ledger_v01.json --dst data/ledger.json --anchor anchors/latest.json
 ```
+
+## 性能確認（ハッシュ）
+```bash
+python scripts/perf_hash_benchmark.py <target_file>
+```

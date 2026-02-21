@@ -9,6 +9,15 @@ from app.audit import log_event
 from app.crypto_keys import key_id_from_public_key, load_public_key, validate_private_key_permissions
 from app.hashing import sha256_upload_file
 from app.ledger import append_record, ensure_ledger_exists, load_ledger, verify_chain
+from app.schemas import (
+    AnchorLatestResponse,
+    HealthResponse,
+    LedgerVerifySuccessResponse,
+    PublicKeyResponse,
+    RecordsResponse,
+    RegisterResponse,
+    VerifyResponse,
+)
 
 app = FastAPI(title="Checksum Registry", version="0.2")
 
@@ -40,7 +49,7 @@ def app_js() -> FileResponse:
     return FileResponse(STATIC_DIR / "app.js", media_type="application/javascript; charset=utf-8")
 
 
-@app.get("/api/v1/health")
+@app.get("/api/v1/health", response_model=HealthResponse)
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
@@ -99,12 +108,12 @@ def _verify_breakdown(valid: bool, reason: str | None) -> dict[str, Any]:
     }
 
 
-@app.post("/api/v1/records/register")
+@app.post("/api/v1/records/register", response_model=RegisterResponse, status_code=201)
 async def register_record(
     name: str | None = Form(None),
     version: str | None = Form(None),
     file: UploadFile | None = File(None),
-) -> JSONResponse:
+) -> JSONResponse | dict[str, Any]:
     if name is None or version is None or file is None:
         log_event("records_register", "invalid_request", {})
         return _error_response(400, "INVALID_REQUEST", "invalid request")
@@ -140,31 +149,28 @@ async def register_record(
         )
         entry = new_block["entry"]
         log_event("records_register", "success", {"index": new_block["index"], "name": name, "version": version})
-        return JSONResponse(
-            status_code=201,
-            content={
-                "index": new_block["index"],
-                "name": entry["name"],
-                "version": entry["version"],
-                "sha256": entry["file_sha256"],
-                "file_size_bytes": entry["file_size_bytes"],
-                "original_filename": entry["original_filename"],
-                "timestamp_utc": new_block["timestamp_utc"],
-                "signing_key_id": new_block["signing_key_id"],
-                "signature": new_block["signature"],
-            },
-        )
+        return {
+            "index": new_block["index"],
+            "name": entry["name"],
+            "version": entry["version"],
+            "sha256": entry["file_sha256"],
+            "file_size_bytes": entry["file_size_bytes"],
+            "original_filename": entry["original_filename"],
+            "timestamp_utc": new_block["timestamp_utc"],
+            "signing_key_id": new_block["signing_key_id"],
+            "signature": new_block["signature"],
+        }
     except Exception:
         log_event("records_register", "error", {"name": name, "version": version})
         return _error_response(500, "INTERNAL_ERROR", "internal server error")
 
 
-@app.post("/api/v1/records/verify")
+@app.post("/api/v1/records/verify", response_model=VerifyResponse)
 async def verify_record(
     name: str = Form(""),
     version: str = Form(""),
     file: UploadFile | None = File(None),
-) -> JSONResponse:
+) -> JSONResponse | dict[str, Any]:
     if file is None or not file.filename:
         log_event("records_verify", "invalid_request", {})
         return _error_response(400, "INVALID_REQUEST", "invalid request")
@@ -213,27 +219,24 @@ async def verify_record(
 
         entry = matched_block["entry"]
         log_event("records_verify", "success", {"index": matched_block["index"], "match_mode": match_mode})
-        return JSONResponse(
-            status_code=200,
-            content={
-                "matched": True,
-                "match_mode": match_mode,
-                "index": matched_block["index"],
-                "name": entry["name"],
-                "version": entry["version"],
-                "sha256": entry["file_sha256"],
-                "timestamp_utc": matched_block["timestamp_utc"],
-                "signing_key_id": matched_block.get("signing_key_id"),
-                "signature": matched_block.get("signature"),
-            },
-        )
+        return {
+            "matched": True,
+            "match_mode": match_mode,
+            "index": matched_block["index"],
+            "name": entry["name"],
+            "version": entry["version"],
+            "sha256": entry["file_sha256"],
+            "timestamp_utc": matched_block["timestamp_utc"],
+            "signing_key_id": matched_block.get("signing_key_id"),
+            "signature": matched_block.get("signature"),
+        }
     except Exception:
         log_event("records_verify", "error", {"name": name, "version": version})
         return _error_response(500, "INTERNAL_ERROR", "internal server error")
 
 
-@app.get("/api/v1/records")
-def list_records() -> JSONResponse:
+@app.get("/api/v1/records", response_model=RecordsResponse)
+def list_records() -> JSONResponse | dict[str, Any]:
     try:
         ledger = load_ledger()
         records = _record_blocks(ledger)
@@ -252,14 +255,14 @@ def list_records() -> JSONResponse:
             for block in records
         ]
         log_event("records_list", "success", {"count": len(items)})
-        return JSONResponse(status_code=200, content={"count": len(items), "items": items})
+        return {"count": len(items), "items": items}
     except Exception:
         log_event("records_list", "error", {})
         return _error_response(500, "INTERNAL_ERROR", "internal server error")
 
 
-@app.post("/api/v1/ledger/verify")
-def verify_ledger() -> JSONResponse:
+@app.post("/api/v1/ledger/verify", response_model=LedgerVerifySuccessResponse)
+def verify_ledger() -> JSONResponse | dict[str, Any]:
     try:
         ok, index, reason = verify_chain()
         checks = _verify_breakdown(ok, reason)
@@ -267,14 +270,11 @@ def verify_ledger() -> JSONResponse:
             ledger = load_ledger()
             checked = len(ledger.get("blocks", []))
             log_event("ledger_verify", "success", {"checked_blocks": checked})
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "valid": True,
-                    "checked_blocks": checked,
-                    "checks": checks,
-                },
-            )
+            return {
+                "valid": True,
+                "checked_blocks": checked,
+                "checks": checks,
+            }
 
         log_event("ledger_verify", "failed", {"index": index, "reason": reason})
         return JSONResponse(
@@ -295,20 +295,17 @@ def verify_ledger() -> JSONResponse:
         return _error_response(500, "INTERNAL_ERROR", "internal server error")
 
 
-@app.get("/api/v1/keys/public")
-def get_public_key() -> JSONResponse:
+@app.get("/api/v1/keys/public", response_model=PublicKeyResponse)
+def get_public_key() -> JSONResponse | dict[str, Any]:
     try:
         pubkey = load_public_key(str(PUBLIC_KEY_PATH))
         pem = PUBLIC_KEY_PATH.read_text(encoding="utf-8")
         key_id = key_id_from_public_key(pubkey)
         log_event("keys_public", "success", {"key_id": key_id})
-        return JSONResponse(
-            status_code=200,
-            content={
-                "key_id": key_id,
-                "public_key_pem": pem,
-            },
-        )
+        return {
+            "key_id": key_id,
+            "public_key_pem": pem,
+        }
     except FileNotFoundError:
         log_event("keys_public", "not_found", {})
         return _error_response(404, "PUBLIC_KEY_NOT_FOUND", "public key not found")
@@ -317,15 +314,15 @@ def get_public_key() -> JSONResponse:
         return _error_response(500, "INTERNAL_ERROR", "internal server error")
 
 
-@app.get("/api/v1/anchors/latest")
-def get_latest_anchor() -> JSONResponse:
+@app.get("/api/v1/anchors/latest", response_model=AnchorLatestResponse)
+def get_latest_anchor() -> JSONResponse | dict[str, Any]:
     try:
         if not ANCHOR_PATH.exists():
             log_event("anchors_latest", "not_found", {})
             return _error_response(404, "ANCHOR_NOT_FOUND", "anchor not found")
         anchor = json.loads(ANCHOR_PATH.read_text(encoding="utf-8"))
         log_event("anchors_latest", "success", {"latest_index": anchor.get("latest_index")})
-        return JSONResponse(status_code=200, content=anchor)
+        return anchor
     except Exception:
         log_event("anchors_latest", "error", {})
         return _error_response(500, "INTERNAL_ERROR", "internal server error")
