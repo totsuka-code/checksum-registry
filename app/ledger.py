@@ -6,7 +6,7 @@ import os
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from app.crypto_keys import (
     key_id_from_public_key,
@@ -151,7 +151,10 @@ def load_ledger() -> dict[str, Any]:
         save_ledger(ledger)
         return ledger
 
-    return json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
+    loaded = json.loads(LEDGER_PATH.read_text(encoding="utf-8"))
+    if not isinstance(loaded, dict):
+        raise ValueError("ledger root must be object")
+    return cast(dict[str, Any], loaded)
 
 
 def save_ledger(ledger: dict[str, Any]) -> None:

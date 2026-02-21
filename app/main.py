@@ -338,7 +338,10 @@ def get_latest_anchor() -> JSONResponse | dict[str, Any]:
         if not ANCHOR_PATH.exists():
             log_event("anchors_latest", "not_found", {})
             return _error_response(404, "ANCHOR_NOT_FOUND", "anchor not found")
-        anchor = json.loads(ANCHOR_PATH.read_text(encoding="utf-8"))
+        anchor_raw = json.loads(ANCHOR_PATH.read_text(encoding="utf-8"))
+        if not isinstance(anchor_raw, dict):
+            raise ValueError("anchor root must be object")
+        anchor: dict[str, Any] = anchor_raw
         log_event("anchors_latest", "success", {"latest_index": anchor.get("latest_index")})
         return anchor
     except Exception:
