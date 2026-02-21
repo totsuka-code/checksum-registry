@@ -46,7 +46,7 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 ## 動作確認
 1. `http://127.0.0.1:8000/` を開く。  
 2. 登録/検証/一覧/台帳検証/最新アンカー表示が動作することを確認する。  
-3. `GET /api/v1/ledger/verify` で `checks.signature_valid` が返ることを確認する。  
+3. `POST /api/v1/ledger/verify` で `checks.signature_valid` が返ることを確認する。  
 4. `logs/audit.log.jsonl` にイベントが追記されることを確認する。
 
 ## テスト
@@ -83,6 +83,9 @@ python scripts/restore_registry.py backups/<timestamp>
 python scripts/restore_registry.py backups/<timestamp> --restore-public-key
 ```
 
+詳細手順:
+- `docs/operations.md`
+
 ## v0.1 から v0.2 への移行
 ```bash
 python scripts/migrate_v01_to_v02.py --src data/ledger_v01.json --dst data/ledger.json --anchor anchors/latest.json
@@ -92,3 +95,11 @@ python scripts/migrate_v01_to_v02.py --src data/ledger_v01.json --dst data/ledge
 ```bash
 python scripts/perf_hash_benchmark.py <target_file>
 ```
+
+## 仕様書
+- 画面仕様: `docs/spec.md`
+- API仕様: `docs/api_spec.md`
+- 台帳仕様: `docs/ledger_spec.md`
+- 鍵管理: `docs/key_management.md`
+- 運用Runbook: `docs/operations.md`
+- リリースチェック: `docs/release_checklist.md`

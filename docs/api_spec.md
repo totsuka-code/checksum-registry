@@ -1,8 +1,12 @@
-﻿# API仕様書 v0.2（実装同期版）
+# API仕様書 v0.2（実装同期版）
 
 Base URL: `http://127.0.0.1:8000/api/v1`
 
-## 1. 共通エラー形式
+## 1. 共通
+- 文字コード: UTF-8
+- 通信方式: ローカルHTTPのみ
+- ファイル受信: `multipart/form-data`
+- エラー形式（共通）:
 ```json
 {
   "error": {
@@ -12,9 +16,20 @@ Base URL: `http://127.0.0.1:8000/api/v1`
 }
 ```
 
-## 2. `POST /records/register`
-- Form: `name` required, `version` required, `file` required
-- 201:
+## 2. `GET /health`
+- 正常: `200`
+```json
+{
+  "status": "ok"
+}
+```
+
+## 3. `POST /records/register`
+- Form:
+- `name` required
+- `version` required
+- `file` required
+- 正常: `201`
 ```json
 {
   "index": 1,
@@ -28,12 +43,17 @@ Base URL: `http://127.0.0.1:8000/api/v1`
   "signature": "base64..."
 }
 ```
-- 409: `DUPLICATE_NAME_VERSION`
-- 400: `INVALID_REQUEST`
+- エラー:
+- `400 INVALID_REQUEST`
+- `409 DUPLICATE_NAME_VERSION`
+- `500 INTERNAL_ERROR`
 
-## 3. `POST /records/verify`
-- Form: `name` optional, `version` optional, `file` required
-- 200:
+## 4. `POST /records/verify`
+- Form:
+- `name` optional
+- `version` optional
+- `file` required
+- 正常: `200`
 ```json
 {
   "matched": true,
@@ -47,11 +67,22 @@ Base URL: `http://127.0.0.1:8000/api/v1`
   "signature": "base64..."
 }
 ```
-- 404: `NOT_FOUND`
-- 400: `INVALID_REQUEST`
+- 不一致: `404`
+```json
+{
+  "matched": false,
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "no matching record"
+  }
+}
+```
+- エラー:
+- `400 INVALID_REQUEST`
+- `500 INTERNAL_ERROR`
 
-## 4. `GET /records`
-- 200:
+## 5. `GET /records`
+- 正常: `200`
 ```json
 {
   "count": 1,
@@ -70,9 +101,11 @@ Base URL: `http://127.0.0.1:8000/api/v1`
   ]
 }
 ```
+- エラー:
+- `500 INTERNAL_ERROR`
 
-## 5. `POST /ledger/verify`
-- 200:
+## 6. `POST /ledger/verify`
+- 正常: `200`
 ```json
 {
   "valid": true,
@@ -83,7 +116,7 @@ Base URL: `http://127.0.0.1:8000/api/v1`
   }
 }
 ```
-- 409:
+- 改ざん検知: `409`
 ```json
 {
   "valid": false,
@@ -99,20 +132,39 @@ Base URL: `http://127.0.0.1:8000/api/v1`
   }
 }
 ```
+- 内部障害: `500 INTERNAL_ERROR`
 
-## 6. `GET /keys/public`
-- 200:
+## 7. `GET /keys/public`
+- 正常: `200`
 ```json
 {
   "key_id": "16hex",
   "public_key_pem": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----\n"
 }
 ```
-- 404: `PUBLIC_KEY_NOT_FOUND`
+- エラー:
+- `404 PUBLIC_KEY_NOT_FOUND`
+- `500 INTERNAL_ERROR`
 
-## 7. `GET /anchors/latest`
-- 200: `anchors/latest.json` 相当
-- 404: `ANCHOR_NOT_FOUND`
+## 8. `GET /anchors/latest`
+- 正常: `200`
+```json
+{
+  "schema_version": "0.2",
+  "ledger_path": "data/ledger.json",
+  "latest_index": 12,
+  "block_hash": "64hex...",
+  "timestamp_utc": "2026-02-21T12:34:56Z",
+  "signing_key_id": "16hex",
+  "signature": "base64..."
+}
+```
+- エラー:
+- `404 ANCHOR_NOT_FOUND`
+- `500 INTERNAL_ERROR`
 
-## 8. 非提供API
-- 更新/削除/台帳再生成/外部連携APIは提供しない
+## 9. 非提供API
+- 更新APIは提供しない
+- 削除APIは提供しない
+- 台帳再生成APIは提供しない
+- 外部連携APIは提供しない

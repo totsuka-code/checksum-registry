@@ -215,4 +215,5 @@ anchors/latest.json
 logs/audit.log.jsonl
 
 backups/
+artifacts/
 
