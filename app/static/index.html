@@ -1,142 +1,363 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Checksum Registry v0.2</title>
     <style>
+      :root {
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --text: #132238;
+        --muted: #5f728a;
+        --line: #d4dce8;
+        --primary: #0f4ca6;
+        --primary-strong: #0b3c82;
+        --ok: #17794a;
+        --warn: #b15a00;
+        --ng: #b42318;
+        --soft: #edf2fb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        font-family: sans-serif;
-        margin: 24px;
-        line-height: 1.5;
+        margin: 0;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 15% -20%, #dbe9ff 0%, transparent 45%),
+          radial-gradient(circle at 95% 0%, #cbe3ff 0%, transparent 40%),
+          var(--bg);
+        font-family: "BIZ UDPGothic", "Yu Gothic UI", "Hiragino Sans", sans-serif;
       }
-      h1 {
-        margin-bottom: 16px;
+
+      .shell {
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 28px 20px 40px;
       }
-      section {
-        border: 1px solid #ccc;
+
+      .hero {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: linear-gradient(135deg, #0f4ca6 0%, #0b3c82 100%);
+        color: #fff;
+        padding: 22px 24px;
+        box-shadow: 0 8px 20px rgba(16, 52, 94, 0.22);
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        letter-spacing: 0.02em;
+      }
+
+      .hero p {
+        margin: 10px 0 0;
+        color: #dbe8ff;
+      }
+
+      .hero-row {
+        margin-top: 14px;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.16);
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #cfd8e6;
+      }
+
+      .dot.ok {
+        background: #4ade80;
+      }
+
+      .layout {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
         padding: 16px;
-        margin-bottom: 16px;
+        box-shadow: 0 4px 10px rgba(17, 32, 54, 0.06);
+        animation: rise 0.25s ease-out;
       }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .card h2 {
+        margin: 0 0 10px;
+        font-size: 1.1rem;
+      }
+
+      .sub {
+        margin: -2px 0 12px;
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
       form {
         display: grid;
-        gap: 8px;
-        max-width: 480px;
+        gap: 10px;
       }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
       label {
         display: grid;
         gap: 4px;
+        font-weight: 600;
+        font-size: 0.86rem;
       }
-      button {
-        width: fit-content;
-        padding: 6px 12px;
-      }
-      .result {
-        margin-top: 12px;
-        padding: 8px;
-        background: #f6f6f6;
-        white-space: pre-wrap;
-      }
-      table {
-        border-collapse: collapse;
+
+      input {
         width: 100%;
-        margin-top: 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 11px;
+        font-size: 0.95rem;
+        color: var(--text);
+        background: #fff;
       }
-      th,
-      td {
-        border: 1px solid #ccc;
-        padding: 6px;
-        text-align: left;
-        vertical-align: top;
-        word-break: break-all;
+
+      input:focus {
+        outline: none;
+        border-color: #7ba7ea;
+        box-shadow: 0 0 0 3px rgba(15, 76, 166, 0.14);
       }
+
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 14px;
+        color: #fff;
+        background: var(--primary);
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--primary-strong);
+      }
+
+      button.secondary {
+        background: #355981;
+      }
+
+      button.ghost {
+        background: #5f728a;
+      }
+
       .inline-buttons {
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
       }
+
+      .result {
+        margin-top: 10px;
+        border: 1px solid #cfdae9;
+        background: var(--soft);
+        border-radius: 10px;
+        padding: 10px 11px;
+        white-space: pre-wrap;
+        font-size: 0.9rem;
+        min-height: 42px;
+      }
+
+      .result.ok {
+        border-color: #9fd8b8;
+        background: #e9f8f0;
+      }
+
+      .result.warn {
+        border-color: #f2c48f;
+        background: #fff4e7;
+      }
+
+      .result.ng {
+        border-color: #f2b4b7;
+        background: #ffeff0;
+      }
+
+      .table-wrap {
+        width: 100%;
+        overflow-x: auto;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 860px;
+        margin-top: 10px;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--line);
+        padding: 8px;
+        text-align: left;
+        vertical-align: top;
+        font-size: 0.84rem;
+        word-break: break-all;
+      }
+
+      th {
+        background: #f1f5fb;
+      }
+
+      @media (max-width: 820px) {
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body>
-    <h1>Checksum Registry v0.2</h1>
+    <div class="shell">
+      <header class="hero">
+        <h1>Checksum Registry v0.2</h1>
+        <p>ローカル専用のチェックサム台帳。登録・検証・改ざん検知・アンカー確認を一画面で管理します。</p>
+        <div class="hero-row">
+          <span class="pill"><span id="health-dot" class="dot"></span><span id="health-text">API未確認</span></span>
+          <span class="pill"><span id="anchor-dot" class="dot"></span><span id="anchor-text">アンカー未取得</span></span>
+        </div>
+      </header>
 
-    <section>
-      <h2>登録</h2>
-      <form id="register-form">
-        <label>
-          name
-          <input id="register-name" name="name" type="text" required maxlength="100" />
-        </label>
-        <label>
-          version
-          <input id="register-version" name="version" type="text" required maxlength="50" />
-        </label>
-        <label>
-          file
-          <input id="register-file" name="file" type="file" required />
-        </label>
-        <button type="submit">登録する</button>
-      </form>
-      <div id="register-result" class="result"></div>
-    </section>
+      <main class="layout">
+        <section class="card">
+          <h2>登録</h2>
+          <p class="sub">name + version が一意のレコードとしてファイルを登録します。</p>
+          <form id="register-form">
+            <div class="grid-2">
+              <label>
+                name
+                <input id="register-name" name="name" type="text" required maxlength="100" />
+              </label>
+              <label>
+                version
+                <input id="register-version" name="version" type="text" required maxlength="50" />
+              </label>
+            </div>
+            <label>
+              file
+              <input id="register-file" name="file" type="file" required />
+            </label>
+            <div class="inline-buttons">
+              <button type="submit">登録する</button>
+            </div>
+          </form>
+          <div id="register-result" class="result">未実行</div>
+        </section>
 
-    <section>
-      <h2>検証</h2>
-      <form id="verify-form">
-        <label>
-          name（任意）
-          <input id="verify-name" name="name" type="text" maxlength="100" />
-        </label>
-        <label>
-          version（任意）
-          <input id="verify-version" name="version" type="text" maxlength="50" />
-        </label>
-        <label>
-          file
-          <input id="verify-file" name="file" type="file" required />
-        </label>
-        <button type="submit">検証する</button>
-      </form>
-      <div id="verify-result" class="result"></div>
-    </section>
+        <section class="card">
+          <h2>検証</h2>
+          <p class="sub">name/version を指定した厳密一致、または SHA-256 のみで照合します。</p>
+          <form id="verify-form">
+            <div class="grid-2">
+              <label>
+                name（任意）
+                <input id="verify-name" name="name" type="text" maxlength="100" />
+              </label>
+              <label>
+                version（任意）
+                <input id="verify-version" name="version" type="text" maxlength="50" />
+              </label>
+            </div>
+            <label>
+              file
+              <input id="verify-file" name="file" type="file" required />
+            </label>
+            <div class="inline-buttons">
+              <button type="submit">検証する</button>
+            </div>
+          </form>
+          <div id="verify-result" class="result">未実行</div>
+        </section>
 
-    <section>
-      <h2>一覧</h2>
-      <button id="reload-records" type="button">再読み込み</button>
-      <div id="records-result" class="result"></div>
-      <table>
-        <thead>
-          <tr>
-            <th>index</th>
-            <th>timestamp_utc</th>
-            <th>name</th>
-            <th>version</th>
-            <th>sha256</th>
-            <th>file_size_bytes</th>
-            <th>original_filename</th>
-            <th>signing_key_id</th>
-          </tr>
-        </thead>
-        <tbody id="records-tbody"></tbody>
-      </table>
-    </section>
+        <section class="card">
+          <h2>一覧</h2>
+          <p class="sub">登録済みレコード（genesis除外）を index 昇順で表示します。</p>
+          <div class="inline-buttons">
+            <button id="reload-records" type="button" class="secondary">再読み込み</button>
+          </div>
+          <div id="records-result" class="result">未取得</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>index</th>
+                  <th>timestamp_utc</th>
+                  <th>name</th>
+                  <th>version</th>
+                  <th>sha256</th>
+                  <th>file_size_bytes</th>
+                  <th>original_filename</th>
+                  <th>signing_key_id</th>
+                </tr>
+              </thead>
+              <tbody id="records-tbody"></tbody>
+            </table>
+          </div>
+        </section>
 
-    <section>
-      <h2>台帳検証</h2>
-      <button id="verify-ledger" type="button">台帳を検証する</button>
-      <div id="ledger-result" class="result"></div>
-      <div id="ledger-signature-result" class="result"></div>
-    </section>
+        <section class="card">
+          <h2>台帳検証</h2>
+          <p class="sub">チェーン整合性と署名検証の結果を表示します。</p>
+          <div class="inline-buttons">
+            <button id="verify-ledger" type="button">台帳を検証する</button>
+          </div>
+          <div id="ledger-result" class="result">未実行</div>
+          <div id="ledger-signature-result" class="result">署名検証: 未実行</div>
+        </section>
 
-    <section>
-      <h2>最新アンカー</h2>
-      <div class="inline-buttons">
-        <button id="load-anchor" type="button">アンカー取得</button>
-        <button id="copy-anchor-hash" type="button">block_hashをコピー</button>
-        <button id="copy-anchor-signature" type="button">signatureをコピー</button>
-      </div>
-      <div id="anchor-result" class="result"></div>
-    </section>
+        <section class="card">
+          <h2>最新アンカー</h2>
+          <p class="sub">最新ブロックのアンカー情報を取得し、ハッシュと署名をコピーできます。</p>
+          <div class="inline-buttons">
+            <button id="load-anchor" type="button" class="secondary">アンカー取得</button>
+            <button id="copy-anchor-hash" type="button" class="ghost">block_hashをコピー</button>
+            <button id="copy-anchor-signature" type="button" class="ghost">signatureをコピー</button>
+          </div>
+          <div id="anchor-result" class="result">未取得</div>
+        </section>
+      </main>
+    </div>
 
     <script src="/static/app.js"></script>
   </body>
