@@ -65,7 +65,11 @@ def sign_block_hash(private_key: Ed25519PrivateKey, block_hash_hex: str) -> tupl
     return signature_b64, signing_key_id
 
 
-def verify_block_hash(public_key: Ed25519PublicKey, block_hash_hex: str, signature_b64: str) -> bool:
+def verify_block_hash(
+    public_key: Ed25519PublicKey,
+    block_hash_hex: str,
+    signature_b64: str,
+) -> bool:
     try:
         block_hash_bytes = bytes.fromhex(block_hash_hex)
         if len(block_hash_bytes) != 32:

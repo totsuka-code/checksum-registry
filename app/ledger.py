@@ -46,7 +46,12 @@ def _build_block_hash_from_body(block_body: dict[str, Any]) -> str:
     return _sha256_hex(_canonical_json_bytes(block_body))
 
 
-def _build_block_body(index: int, timestamp_utc: str, prev_hash: str, entry: dict[str, Any]) -> dict[str, Any]:
+def _build_block_body(
+    index: int,
+    timestamp_utc: str,
+    prev_hash: str,
+    entry: dict[str, Any],
+) -> dict[str, Any]:
     return {
         "index": index,
         "timestamp_utc": timestamp_utc,

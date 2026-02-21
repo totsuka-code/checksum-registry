@@ -8,7 +8,11 @@ from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 
 from app.audit import log_event
-from app.crypto_keys import key_id_from_public_key, load_public_key, validate_private_key_permissions
+from app.crypto_keys import (
+    key_id_from_public_key,
+    load_public_key,
+    validate_private_key_permissions,
+)
 from app.hashing import sha256_upload_file
 from app.ledger import append_record, ensure_ledger_exists, load_ledger, verify_chain
 from app.schemas import (
@@ -140,7 +144,11 @@ async def register_record(
         )
         if duplicate:
             log_event("records_register", "duplicate", {"name": name, "version": version})
-            return _error_response(409, "DUPLICATE_NAME_VERSION", "same name/version already exists")
+            return _error_response(
+                409,
+                "DUPLICATE_NAME_VERSION",
+                "same name/version already exists",
+            )
 
         sha256_hex, size_bytes = await sha256_upload_file(file)
         new_block = append_record(
@@ -152,7 +160,11 @@ async def register_record(
             original_filename=file.filename,
         )
         entry = new_block["entry"]
-        log_event("records_register", "success", {"index": new_block["index"], "name": name, "version": version})
+        log_event(
+            "records_register",
+            "success",
+            {"index": new_block["index"], "name": name, "version": version},
+        )
         return {
             "index": new_block["index"],
             "name": entry["name"],
@@ -222,7 +234,11 @@ async def verify_record(
             )
 
         entry = matched_block["entry"]
-        log_event("records_verify", "success", {"index": matched_block["index"], "match_mode": match_mode})
+        log_event(
+            "records_verify",
+            "success",
+            {"index": matched_block["index"], "match_mode": match_mode},
+        )
         return {
             "matched": True,
             "match_mode": match_mode,
