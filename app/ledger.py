@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -17,11 +18,14 @@ from app.crypto_keys import (
 
 LEDGER_PATH = Path("data/ledger.json")
 ANCHOR_PATH = Path("anchors/latest.json")
+LOCK_PATH = Path("data/ledger.lock")
 GENESIS_PREV_HASH = "0" * 64
 SCHEMA_VERSION = "0.2"
 HASH_ALGORITHM = "sha256"
 SIGNATURE_ALGORITHM = "ed25519"
 CANONICAL_JSON_LABEL = "JCS-STRICT"
+LOCK_TIMEOUT_SECONDS = 5.0
+LOCK_RETRY_SECONDS = 0.05
 
 
 def _utc_now_iso8601_seconds() -> str:
@@ -101,6 +105,28 @@ def _atomic_write_json(path: Path, data: dict[str, Any]) -> None:
     os.replace(tmp_path, path)
 
 
+def _acquire_lock() -> int:
+    LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
+    deadline = time.monotonic() + LOCK_TIMEOUT_SECONDS
+    while True:
+        try:
+            return os.open(str(LOCK_PATH), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            if time.monotonic() >= deadline:
+                raise TimeoutError("ledger lock timeout")
+            time.sleep(LOCK_RETRY_SECONDS)
+
+
+def _release_lock(fd: int) -> None:
+    try:
+        os.close(fd)
+    finally:
+        try:
+            LOCK_PATH.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def _build_latest_anchor(ledger: dict[str, Any]) -> dict[str, Any]:
     latest = ledger["blocks"][-1]
     return {
@@ -124,8 +150,12 @@ def load_ledger() -> dict[str, Any]:
 
 
 def save_ledger(ledger: dict[str, Any]) -> None:
-    _atomic_write_json(LEDGER_PATH, ledger)
-    _atomic_write_json(ANCHOR_PATH, _build_latest_anchor(ledger))
+    lock_fd = _acquire_lock()
+    try:
+        _atomic_write_json(LEDGER_PATH, ledger)
+        _atomic_write_json(ANCHOR_PATH, _build_latest_anchor(ledger))
+    finally:
+        _release_lock(lock_fd)
 
 
 def append_record(
@@ -222,4 +252,3 @@ def ensure_ledger_exists() -> None:
     ledger = load_ledger()
     if not ANCHOR_PATH.exists():
         _atomic_write_json(ANCHOR_PATH, _build_latest_anchor(ledger))
-
