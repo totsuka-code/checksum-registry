@@ -1,0 +1,126 @@
+﻿<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Checksum Registry v0.1</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 24px;
+        line-height: 1.5;
+      }
+      h1 {
+        margin-bottom: 16px;
+      }
+      section {
+        border: 1px solid #ccc;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      form {
+        display: grid;
+        gap: 8px;
+        max-width: 480px;
+      }
+      label {
+        display: grid;
+        gap: 4px;
+      }
+      button {
+        width: fit-content;
+        padding: 6px 12px;
+      }
+      .result {
+        margin-top: 12px;
+        padding: 8px;
+        background: #f6f6f6;
+        white-space: pre-wrap;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-top: 12px;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 6px;
+        text-align: left;
+        vertical-align: top;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Checksum Registry v0.1</h1>
+
+    <section>
+      <h2>登録</h2>
+      <form id="register-form">
+        <label>
+          name
+          <input id="register-name" name="name" type="text" required maxlength="100" />
+        </label>
+        <label>
+          version
+          <input id="register-version" name="version" type="text" required maxlength="50" />
+        </label>
+        <label>
+          file
+          <input id="register-file" name="file" type="file" required />
+        </label>
+        <button type="submit">登録する</button>
+      </form>
+      <div id="register-result" class="result"></div>
+    </section>
+
+    <section>
+      <h2>検証</h2>
+      <form id="verify-form">
+        <label>
+          name（任意）
+          <input id="verify-name" name="name" type="text" maxlength="100" />
+        </label>
+        <label>
+          version（任意）
+          <input id="verify-version" name="version" type="text" maxlength="50" />
+        </label>
+        <label>
+          file
+          <input id="verify-file" name="file" type="file" required />
+        </label>
+        <button type="submit">検証する</button>
+      </form>
+      <div id="verify-result" class="result"></div>
+    </section>
+
+    <section>
+      <h2>一覧</h2>
+      <button id="reload-records" type="button">再読み込み</button>
+      <div id="records-result" class="result"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>index</th>
+            <th>timestamp_utc</th>
+            <th>name</th>
+            <th>version</th>
+            <th>sha256</th>
+            <th>file_size_bytes</th>
+            <th>original_filename</th>
+          </tr>
+        </thead>
+        <tbody id="records-tbody"></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>台帳検証</h2>
+      <button id="verify-ledger" type="button">台帳を検証する</button>
+      <div id="ledger-result" class="result"></div>
+    </section>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

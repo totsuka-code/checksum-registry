@@ -1,12 +1,16 @@
-﻿from typing import Any
+﻿from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, File, Form, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from app.hashing import sha256_upload_file
 from app.ledger import append_record, ensure_ledger_exists, load_ledger, verify_chain
 
 app = FastAPI(title="Checksum Registry", version="0.1")
+
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
 
 
 @app.on_event("startup")
@@ -14,20 +18,14 @@ def on_startup() -> None:
     ensure_ledger_exists()
 
 
-@app.get("/", response_class=HTMLResponse)
-def index() -> str:
-    return """<!doctype html>
-<html lang=\"ja\">
-  <head>
-    <meta charset=\"utf-8\" />
-    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
-    <title>Checksum Registry v0.1</title>
-  </head>
-  <body>
-    <h1>Checksum Registry v0.1</h1>
-  </body>
-</html>
-"""
+@app.get("/")
+def index() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html", media_type="text/html; charset=utf-8")
+
+
+@app.get("/static/app.js")
+def app_js() -> FileResponse:
+    return FileResponse(STATIC_DIR / "app.js", media_type="application/javascript; charset=utf-8")
 
 
 @app.get("/api/v1/health")
