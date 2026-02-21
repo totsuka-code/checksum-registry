@@ -1,4 +1,6 @@
-﻿import json
+import json
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -19,8 +21,6 @@ from app.schemas import (
     VerifyResponse,
 )
 
-app = FastAPI(title="Checksum Registry", version="0.2")
-
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 ANCHOR_PATH = Path("anchors/latest.json")
@@ -28,8 +28,8 @@ PUBLIC_KEY_PATH = Path("keys/public_key.pem")
 PRIVATE_KEY_PATH = Path("keys/private_key.pem")
 
 
-@app.on_event("startup")
-def on_startup() -> None:
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     # v0.2: 公開鍵は起動必須
     load_public_key(str(PUBLIC_KEY_PATH))
     # 開発用秘密鍵が存在する場合は権限制約を確認する
@@ -37,6 +37,10 @@ def on_startup() -> None:
         validate_private_key_permissions(str(PRIVATE_KEY_PATH))
     ensure_ledger_exists()
     log_event("startup", "success", {"public_key_path": str(PUBLIC_KEY_PATH)})
+    yield
+
+
+app = FastAPI(title="Checksum Registry", version="0.2", lifespan=lifespan)
 
 
 @app.get("/")
