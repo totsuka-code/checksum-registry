@@ -10,6 +10,14 @@ const recordsTbody = document.getElementById("records-tbody");
 
 const verifyLedgerButton = document.getElementById("verify-ledger");
 const ledgerResult = document.getElementById("ledger-result");
+const ledgerSignatureResult = document.getElementById("ledger-signature-result");
+
+const loadAnchorButton = document.getElementById("load-anchor");
+const copyAnchorHashButton = document.getElementById("copy-anchor-hash");
+const copyAnchorSignatureButton = document.getElementById("copy-anchor-signature");
+const anchorResult = document.getElementById("anchor-result");
+
+let latestAnchor = null;
 
 function setText(el, text) {
   el.textContent = text;
@@ -20,6 +28,18 @@ function apiErrorMessage(json, fallback) {
     return json.error.message;
   }
   return fallback;
+}
+
+async function copyText(text) {
+  if (!text) {
+    return false;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (_error) {
+    return false;
+  }
 }
 
 registerForm.addEventListener("submit", async (event) => {
@@ -66,7 +86,7 @@ registerForm.addEventListener("submit", async (event) => {
     }
 
     setText(registerResult, apiErrorMessage(data, "登録処理に失敗しました"));
-  } catch (error) {
+  } catch (_error) {
     setText(registerResult, "登録処理に失敗しました");
   }
 });
@@ -115,7 +135,7 @@ verifyForm.addEventListener("submit", async (event) => {
     }
 
     setText(verifyResult, apiErrorMessage(data, "検証処理に失敗しました"));
-  } catch (error) {
+  } catch (_error) {
     setText(verifyResult, "検証処理に失敗しました");
   }
 });
@@ -141,11 +161,12 @@ reloadRecordsButton.addEventListener("click", async () => {
         <td>${item.sha256}</td>
         <td>${item.file_size_bytes}</td>
         <td>${item.original_filename}</td>
+        <td>${item.signing_key_id ?? ""}</td>
       `;
       recordsTbody.appendChild(tr);
     }
     setText(recordsResult, `件数: ${data.count}`);
-  } catch (error) {
+  } catch (_error) {
     setText(recordsResult, "一覧取得に失敗しました");
   }
 });
@@ -156,19 +177,58 @@ verifyLedgerButton.addEventListener("click", async () => {
     const data = await response.json();
 
     if (response.status === 200 && data.valid === true) {
-      setText(ledgerResult, "台帳検証成功: すべてのブロック整合性が有効です");
+      setText(ledgerResult, "台帳検証成功: すべてのブロック整合性と署名が有効です");
+      const sigOk = data.checks && data.checks.signature_valid === true ? "OK" : "NG";
+      setText(ledgerSignatureResult, `署名検証: ${sigOk}`);
       return;
     }
 
     if (response.status === 409 && data.valid === false) {
       const index = data.error && data.error.index;
       const reason = data.error && data.error.reason;
+      const sigValid = data.checks ? data.checks.signature_valid : null;
+      const sigText = sigValid === true ? "OK" : "NG";
       setText(ledgerResult, `台帳検証失敗: index=${index} のブロックが不正です（reason=${reason}）`);
+      setText(ledgerSignatureResult, `署名検証: ${sigText}`);
       return;
     }
 
     setText(ledgerResult, apiErrorMessage(data, "台帳検証に失敗しました"));
-  } catch (error) {
+    setText(ledgerSignatureResult, "署名検証: NG");
+  } catch (_error) {
     setText(ledgerResult, "台帳検証に失敗しました");
+    setText(ledgerSignatureResult, "署名検証: NG");
   }
+});
+
+loadAnchorButton.addEventListener("click", async () => {
+  try {
+    const response = await fetch("/api/v1/anchors/latest");
+    const data = await response.json();
+
+    if (response.status !== 200) {
+      setText(anchorResult, apiErrorMessage(data, "アンカー取得に失敗しました"));
+      latestAnchor = null;
+      return;
+    }
+
+    latestAnchor = data;
+    setText(
+      anchorResult,
+      `latest_index=${data.latest_index}\nblock_hash=${data.block_hash}\nsignature=${data.signature}`
+    );
+  } catch (_error) {
+    setText(anchorResult, "アンカー取得に失敗しました");
+    latestAnchor = null;
+  }
+});
+
+copyAnchorHashButton.addEventListener("click", async () => {
+  const ok = await copyText(latestAnchor && latestAnchor.block_hash);
+  setText(anchorResult, ok ? "block_hash をコピーしました" : "コピーに失敗しました（先にアンカー取得してください）");
+});
+
+copyAnchorSignatureButton.addEventListener("click", async () => {
+  const ok = await copyText(latestAnchor && latestAnchor.signature);
+  setText(anchorResult, ok ? "signature をコピーしました" : "コピーに失敗しました（先にアンカー取得してください）");
 });

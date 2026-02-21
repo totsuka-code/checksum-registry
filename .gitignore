@@ -210,3 +210,5 @@ __marimo__/
 data/ledger.json
 keys/private_key.pem
 
+anchors/latest.json
+

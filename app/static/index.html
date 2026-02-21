@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Checksum Registry v0.1</title>
+    <title>Checksum Registry v0.2</title>
     <style>
       body {
         font-family: sans-serif;
@@ -50,10 +50,15 @@
         vertical-align: top;
         word-break: break-all;
       }
+      .inline-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
     </style>
   </head>
   <body>
-    <h1>Checksum Registry v0.1</h1>
+    <h1>Checksum Registry v0.2</h1>
 
     <section>
       <h2>登録</h2>
@@ -109,6 +114,7 @@
             <th>sha256</th>
             <th>file_size_bytes</th>
             <th>original_filename</th>
+            <th>signing_key_id</th>
           </tr>
         </thead>
         <tbody id="records-tbody"></tbody>
@@ -119,6 +125,17 @@
       <h2>台帳検証</h2>
       <button id="verify-ledger" type="button">台帳を検証する</button>
       <div id="ledger-result" class="result"></div>
+      <div id="ledger-signature-result" class="result"></div>
+    </section>
+
+    <section>
+      <h2>最新アンカー</h2>
+      <div class="inline-buttons">
+        <button id="load-anchor" type="button">アンカー取得</button>
+        <button id="copy-anchor-hash" type="button">block_hashをコピー</button>
+        <button id="copy-anchor-signature" type="button">signatureをコピー</button>
+      </div>
+      <div id="anchor-result" class="result"></div>
     </section>
 
     <script src="/static/app.js"></script>

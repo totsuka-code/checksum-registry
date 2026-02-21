@@ -219,4 +219,7 @@ def verify_chain(ledger: dict[str, Any] | None = None) -> tuple[bool, int | None
 
 
 def ensure_ledger_exists() -> None:
-    load_ledger()
+    ledger = load_ledger()
+    if not ANCHOR_PATH.exists():
+        _atomic_write_json(ANCHOR_PATH, _build_latest_anchor(ledger))
+

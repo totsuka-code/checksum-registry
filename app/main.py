@@ -1,16 +1,20 @@
-﻿from pathlib import Path
+﻿import json
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 
+from app.crypto_keys import key_id_from_public_key, load_public_key
 from app.hashing import sha256_upload_file
 from app.ledger import append_record, ensure_ledger_exists, load_ledger, verify_chain
 
-app = FastAPI(title="Checksum Registry", version="0.1")
+app = FastAPI(title="Checksum Registry", version="0.2")
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
+ANCHOR_PATH = Path("anchors/latest.json")
+PUBLIC_KEY_PATH = Path("keys/public_key.pem")
 
 
 @app.on_event("startup")
@@ -54,6 +58,31 @@ def _record_blocks(ledger: dict[str, Any]) -> list[dict[str, Any]]:
             records.append(block)
     records.sort(key=lambda x: x.get("index", 0))
     return records
+
+
+def _verify_breakdown(valid: bool, reason: str | None) -> dict[str, Any]:
+    if valid:
+        return {
+            "chain_integrity_valid": True,
+            "signature_valid": True,
+        }
+
+    if reason in {"signature_missing", "signature_invalid", "unknown_key"}:
+        return {
+            "chain_integrity_valid": True,
+            "signature_valid": False,
+        }
+
+    if reason in {"invalid_genesis", "index_mismatch", "prev_hash_mismatch", "block_hash_mismatch"}:
+        return {
+            "chain_integrity_valid": False,
+            "signature_valid": None,
+        }
+
+    return {
+        "chain_integrity_valid": None,
+        "signature_valid": None,
+    }
 
 
 @app.post("/api/v1/records/register")
@@ -102,6 +131,8 @@ async def register_record(
                 "file_size_bytes": entry["file_size_bytes"],
                 "original_filename": entry["original_filename"],
                 "timestamp_utc": new_block["timestamp_utc"],
+                "signing_key_id": new_block["signing_key_id"],
+                "signature": new_block["signature"],
             },
         )
     except Exception:
@@ -169,6 +200,8 @@ async def verify_record(
                 "version": entry["version"],
                 "sha256": entry["file_sha256"],
                 "timestamp_utc": matched_block["timestamp_utc"],
+                "signing_key_id": matched_block.get("signing_key_id"),
+                "signature": matched_block.get("signature"),
             },
         )
     except Exception:
@@ -189,6 +222,8 @@ def list_records() -> JSONResponse:
                 "sha256": block["entry"]["file_sha256"],
                 "file_size_bytes": block["entry"]["file_size_bytes"],
                 "original_filename": block["entry"]["original_filename"],
+                "signing_key_id": block.get("signing_key_id"),
+                "signature": block.get("signature"),
             }
             for block in records
         ]
@@ -201,6 +236,7 @@ def list_records() -> JSONResponse:
 def verify_ledger() -> JSONResponse:
     try:
         ok, index, reason = verify_chain()
+        checks = _verify_breakdown(ok, reason)
         if ok:
             ledger = load_ledger()
             return JSONResponse(
@@ -208,6 +244,7 @@ def verify_ledger() -> JSONResponse:
                 content={
                     "valid": True,
                     "checked_blocks": len(ledger.get("blocks", [])),
+                    "checks": checks,
                 },
             )
 
@@ -215,6 +252,7 @@ def verify_ledger() -> JSONResponse:
             status_code=409,
             content={
                 "valid": False,
+                "checks": checks,
                 "error": {
                     "code": "LEDGER_TAMPERED",
                     "message": "block verification failed",
@@ -225,3 +263,33 @@ def verify_ledger() -> JSONResponse:
         )
     except Exception:
         return _error_response(500, "INTERNAL_ERROR", "internal server error")
+
+
+@app.get("/api/v1/keys/public")
+def get_public_key() -> JSONResponse:
+    try:
+        pubkey = load_public_key(str(PUBLIC_KEY_PATH))
+        pem = PUBLIC_KEY_PATH.read_text(encoding="utf-8")
+        return JSONResponse(
+            status_code=200,
+            content={
+                "key_id": key_id_from_public_key(pubkey),
+                "public_key_pem": pem,
+            },
+        )
+    except FileNotFoundError:
+        return _error_response(404, "PUBLIC_KEY_NOT_FOUND", "public key not found")
+    except Exception:
+        return _error_response(500, "INTERNAL_ERROR", "internal server error")
+
+
+@app.get("/api/v1/anchors/latest")
+def get_latest_anchor() -> JSONResponse:
+    try:
+        if not ANCHOR_PATH.exists():
+            return _error_response(404, "ANCHOR_NOT_FOUND", "anchor not found")
+        anchor = json.loads(ANCHOR_PATH.read_text(encoding="utf-8"))
+        return JSONResponse(status_code=200, content=anchor)
+    except Exception:
+        return _error_response(500, "INTERNAL_ERROR", "internal server error")
+
