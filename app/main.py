@@ -5,7 +5,8 @@ from typing import Any
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 
-from app.crypto_keys import key_id_from_public_key, load_public_key
+from app.audit import log_event
+from app.crypto_keys import key_id_from_public_key, load_public_key, validate_private_key_permissions
 from app.hashing import sha256_upload_file
 from app.ledger import append_record, ensure_ledger_exists, load_ledger, verify_chain
 
@@ -15,13 +16,18 @@ BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 ANCHOR_PATH = Path("anchors/latest.json")
 PUBLIC_KEY_PATH = Path("keys/public_key.pem")
+PRIVATE_KEY_PATH = Path("keys/private_key.pem")
 
 
 @app.on_event("startup")
 def on_startup() -> None:
     # v0.2: 公開鍵は起動必須
     load_public_key(str(PUBLIC_KEY_PATH))
+    # 開発用秘密鍵が存在する場合は権限制約を確認する
+    if PRIVATE_KEY_PATH.exists():
+        validate_private_key_permissions(str(PRIVATE_KEY_PATH))
     ensure_ledger_exists()
+    log_event("startup", "success", {"public_key_path": str(PUBLIC_KEY_PATH)})
 
 
 @app.get("/")
@@ -100,13 +106,16 @@ async def register_record(
     file: UploadFile | None = File(None),
 ) -> JSONResponse:
     if name is None or version is None or file is None:
+        log_event("records_register", "invalid_request", {})
         return _error_response(400, "INVALID_REQUEST", "invalid request")
 
     name = name.strip()
     version = version.strip()
     if not name or not version or len(name) > 100 or len(version) > 50:
+        log_event("records_register", "invalid_request", {"name": name, "version": version})
         return _error_response(400, "INVALID_REQUEST", "invalid request")
     if not file.filename:
+        log_event("records_register", "invalid_request", {"name": name, "version": version})
         return _error_response(400, "INVALID_REQUEST", "invalid request")
 
     try:
@@ -117,6 +126,7 @@ async def register_record(
             for block in records
         )
         if duplicate:
+            log_event("records_register", "duplicate", {"name": name, "version": version})
             return _error_response(409, "DUPLICATE_NAME_VERSION", "same name/version already exists")
 
         sha256_hex, size_bytes = await sha256_upload_file(file)
@@ -129,6 +139,7 @@ async def register_record(
             original_filename=file.filename,
         )
         entry = new_block["entry"]
+        log_event("records_register", "success", {"index": new_block["index"], "name": name, "version": version})
         return JSONResponse(
             status_code=201,
             content={
@@ -144,6 +155,7 @@ async def register_record(
             },
         )
     except Exception:
+        log_event("records_register", "error", {"name": name, "version": version})
         return _error_response(500, "INTERNAL_ERROR", "internal server error")
 
 
@@ -154,6 +166,7 @@ async def verify_record(
     file: UploadFile | None = File(None),
 ) -> JSONResponse:
     if file is None or not file.filename:
+        log_event("records_verify", "invalid_request", {})
         return _error_response(400, "INVALID_REQUEST", "invalid request")
 
     try:
@@ -186,6 +199,7 @@ async def verify_record(
                     break
 
         if matched_block is None:
+            log_event("records_verify", "not_found", {"name": name, "version": version})
             return JSONResponse(
                 status_code=404,
                 content={
@@ -198,6 +212,7 @@ async def verify_record(
             )
 
         entry = matched_block["entry"]
+        log_event("records_verify", "success", {"index": matched_block["index"], "match_mode": match_mode})
         return JSONResponse(
             status_code=200,
             content={
@@ -213,6 +228,7 @@ async def verify_record(
             },
         )
     except Exception:
+        log_event("records_verify", "error", {"name": name, "version": version})
         return _error_response(500, "INTERNAL_ERROR", "internal server error")
 
 
@@ -235,8 +251,10 @@ def list_records() -> JSONResponse:
             }
             for block in records
         ]
+        log_event("records_list", "success", {"count": len(items)})
         return JSONResponse(status_code=200, content={"count": len(items), "items": items})
     except Exception:
+        log_event("records_list", "error", {})
         return _error_response(500, "INTERNAL_ERROR", "internal server error")
 
 
@@ -247,15 +265,18 @@ def verify_ledger() -> JSONResponse:
         checks = _verify_breakdown(ok, reason)
         if ok:
             ledger = load_ledger()
+            checked = len(ledger.get("blocks", []))
+            log_event("ledger_verify", "success", {"checked_blocks": checked})
             return JSONResponse(
                 status_code=200,
                 content={
                     "valid": True,
-                    "checked_blocks": len(ledger.get("blocks", [])),
+                    "checked_blocks": checked,
                     "checks": checks,
                 },
             )
 
+        log_event("ledger_verify", "failed", {"index": index, "reason": reason})
         return JSONResponse(
             status_code=409,
             content={
@@ -270,6 +291,7 @@ def verify_ledger() -> JSONResponse:
             },
         )
     except Exception:
+        log_event("ledger_verify", "error", {})
         return _error_response(500, "INTERNAL_ERROR", "internal server error")
 
 
@@ -278,16 +300,20 @@ def get_public_key() -> JSONResponse:
     try:
         pubkey = load_public_key(str(PUBLIC_KEY_PATH))
         pem = PUBLIC_KEY_PATH.read_text(encoding="utf-8")
+        key_id = key_id_from_public_key(pubkey)
+        log_event("keys_public", "success", {"key_id": key_id})
         return JSONResponse(
             status_code=200,
             content={
-                "key_id": key_id_from_public_key(pubkey),
+                "key_id": key_id,
                 "public_key_pem": pem,
             },
         )
     except FileNotFoundError:
+        log_event("keys_public", "not_found", {})
         return _error_response(404, "PUBLIC_KEY_NOT_FOUND", "public key not found")
     except Exception:
+        log_event("keys_public", "error", {})
         return _error_response(500, "INTERNAL_ERROR", "internal server error")
 
 
@@ -295,9 +321,11 @@ def get_public_key() -> JSONResponse:
 def get_latest_anchor() -> JSONResponse:
     try:
         if not ANCHOR_PATH.exists():
+            log_event("anchors_latest", "not_found", {})
             return _error_response(404, "ANCHOR_NOT_FOUND", "anchor not found")
         anchor = json.loads(ANCHOR_PATH.read_text(encoding="utf-8"))
+        log_event("anchors_latest", "success", {"latest_index": anchor.get("latest_index")})
         return JSONResponse(status_code=200, content=anchor)
     except Exception:
+        log_event("anchors_latest", "error", {})
         return _error_response(500, "INTERNAL_ERROR", "internal server error")
-

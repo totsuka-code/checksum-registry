@@ -1,6 +1,7 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import importlib
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -31,6 +32,9 @@ def test_health_and_keys_public(tmp_path, monkeypatch):
     assert r.status_code == 200
     assert "key_id" in r.json()
     assert "BEGIN PUBLIC KEY" in r.json()["public_key_pem"]
+
+    audit_text = Path("logs/audit.log.jsonl").read_text(encoding="utf-8")
+    assert "keys_public" in audit_text
 
 
 def test_register_then_anchor_latest(tmp_path, monkeypatch):

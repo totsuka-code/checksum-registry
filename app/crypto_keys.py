@@ -2,6 +2,9 @@
 
 import base64
 import hashlib
+import os
+import stat
+import sys
 from pathlib import Path
 
 from cryptography.exceptions import InvalidSignature
@@ -18,11 +21,29 @@ def load_public_key(path: str = "keys/public_key.pem") -> Ed25519PublicKey:
 
 
 def load_private_key(path: str = "keys/private_key.pem") -> Ed25519PrivateKey:
+    validate_private_key_permissions(path)
     pem = Path(path).read_bytes()
     key = serialization.load_pem_private_key(pem, password=None)
     if not isinstance(key, Ed25519PrivateKey):
         raise TypeError("private key is not Ed25519")
     return key
+
+
+def validate_private_key_permissions(path: str = "keys/private_key.pem") -> None:
+    private_path = Path(path)
+    if not private_path.exists():
+        raise FileNotFoundError(f"private key not found: {path}")
+
+    # Windows ACL is not reliably represented by POSIX mode bits.
+    if sys.platform.startswith("win"):
+        return
+
+    mode = stat.S_IMODE(os.stat(private_path).st_mode)
+    # Disallow group/other permissions on private key (e.g. 600 only).
+    if mode & 0o077:
+        raise PermissionError(
+            f"insecure private key permissions: {oct(mode)} (expected no group/other access)"
+        )
 
 
 def key_id_from_public_key(pubkey: Ed25519PublicKey) -> str:

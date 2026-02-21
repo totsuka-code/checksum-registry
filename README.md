@@ -12,6 +12,7 @@ FastAPI + 単一ページUIで、SHA-256台帳・Ed25519署名・最新アンカ
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 ## 開発用鍵生成
@@ -37,10 +38,21 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 - `GET /api/v1/keys/public`
 - `GET /api/v1/anchors/latest`
 
+## 監査ログ
+- 保存先: `logs/audit.log.jsonl`
+- 形式: JSON Lines（1行1イベント）
+- 記録対象: startup/register/verify/list/ledger_verify/keys_public/anchors_latest
+
 ## 動作確認
 1. `http://127.0.0.1:8000/` を開く。  
 2. 登録/検証/一覧/台帳検証/最新アンカー表示が動作することを確認する。  
 3. `GET /api/v1/ledger/verify` で `checks.signature_valid` が返ることを確認する。  
+4. `logs/audit.log.jsonl` にイベントが追記されることを確認する。
+
+## テスト
+```bash
+pytest
+```
 
 ## 永続ファイル
 - 台帳: `data/ledger.json`
@@ -48,3 +60,19 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 補足:
 - `anchors/latest.json` が欠落していても、起動時に `data/ledger.json` から自動再生成されます。
+
+## バックアップ/復旧
+バックアップ作成:
+```bash
+python scripts/backup_registry.py
+```
+
+復旧:
+```bash
+python scripts/restore_registry.py backups/<timestamp>
+```
+
+公開鍵もバックアップから戻す場合:
+```bash
+python scripts/restore_registry.py backups/<timestamp> --restore-public-key
+```

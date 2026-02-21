@@ -212,3 +212,7 @@ keys/private_key.pem
 
 anchors/latest.json
 
+logs/audit.log.jsonl
+
+backups/
+
